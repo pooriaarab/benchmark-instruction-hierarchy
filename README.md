@@ -59,6 +59,7 @@ Conflict kinds include user rule vs document text, system vs user, late override
 
 - **Public tasks:** `data/tasks.jsonl` (60 tasks), seed `20261015`, from `node scripts/gen-tasks.mjs --seed 20261015`.
 - **Hidden eval split:** `node scripts/gen-tasks.mjs --seed <n> --split hidden` (not shipped on npm; keep out of the public repo if you run private evals).
+- **Alternate task files:** `--tasks <path>` on the CLI, `createBenchmark({ tasksPath })` in the SDK. Hosted surfaces accept `?tasks=` or an MCP `tasksPath` only for paths inside the package or listed in `IH_TASKS_PATHS`.
 - **Catalog:** human-written patterns in `docs/conflict-catalog.md` (MIT).
 
 Details: [data/PROVENANCE.md](./data/PROVENANCE.md).

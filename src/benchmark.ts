@@ -1,15 +1,56 @@
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { defineBenchmark, type Task, type Trace } from "benchmark-core";
 import { gradeInstructionHierarchy } from "./grader.js";
 
-async function loadTasks(): Promise<Task[]> {
-  const text = await readFile(new URL("../data/tasks.jsonl", import.meta.url), "utf8");
+const DEFAULT_TASKS_URL = new URL("../data/tasks.jsonl", import.meta.url);
+const DATA_DIR = fileURLToPath(new URL("../data/", import.meta.url));
+
+async function loadTasksFile(path: string | URL): Promise<Task[]> {
+  const text = await readFile(path, "utf8");
   return text.trim().split("\n").map((line) => JSON.parse(line) as Task);
+}
+
+export interface BenchmarkSourceOptions {
+  /** Any readable JSONL path (CLI/SDK callers). */
+  tasksPath?: string;
+  /** In-memory task list; builds a fresh benchmark object per call. */
+  tasks?: readonly Task[];
+}
+
+/**
+ * Env var naming extra task files a hosted API/MCP surface may serve.
+ * Comma-separated paths; resolved against the process cwd.
+ */
+export const TASKS_PATHS_ENV = "IH_TASKS_PATHS";
+
+/**
+ * Resolve a caller-requested task file for the hosted surfaces. Allowed:
+ * anything inside the package data directory, or a path listed in
+ * IH_TASKS_PATHS. Everything else throws.
+ */
+export function resolveAllowedTasksPath(requested: string): string {
+  const resolved = resolve(requested);
+  if (resolved.startsWith(DATA_DIR)) return resolved;
+  const extra = (process.env[TASKS_PATHS_ENV] ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => resolve(entry));
+  if (extra.includes(resolved)) return resolved;
+  throw new Error(`Task path is not allowed: ${requested}`);
 }
 
 const WRONG_TOKEN = "WRONG_ALWAYS";
 
-export const benchmark = defineBenchmark({
+export function createBenchmark(options: BenchmarkSourceOptions = {}) {
+  const { tasksPath, tasks } = options;
+  if (tasksPath !== undefined && tasks !== undefined) throw new Error("Set tasksPath or tasks, not both.");
+  const source = tasks
+    ? { tasks }
+    : { loadTasks: () => loadTasksFile(tasksPath !== undefined ? resolve(tasksPath) : DEFAULT_TASKS_URL) };
+  return defineBenchmark({
   id: "benchmark-instruction-hierarchy",
   name: "Instruction Hierarchy",
   tagline: "Do your rules survive a long context full of conflicting text?",
@@ -20,7 +61,7 @@ export const benchmark = defineBenchmark({
   version: "0.1.0",
   status: "alpha",
   saturation: "unknown" as unknown as number,
-  loadTasks,
+  ...source,
   async grade(task, submission, _context) {
     return gradeInstructionHierarchy(task, submission);
   },
@@ -66,7 +107,17 @@ export const benchmark = defineBenchmark({
   ],
   gradingMethod:
     "Deterministic assertion checks on the final answer (normalized match, forbidden tokens, regex shapes). Failed gate assertions score 0; soft checks give weighted partial credit. See docs/grading.md.",
-});
+  });
+}
+
+export const benchmark = createBenchmark();
+
+/** Pick a benchmark object: explicit options win, then IH_TASKS_PATH, then the default public split. */
+export function selectBenchmark(options: BenchmarkSourceOptions = {}) {
+  if (options.tasks !== undefined) return createBenchmark({ tasks: options.tasks });
+  const tasksPath = options.tasksPath ?? process.env.IH_TASKS_PATH;
+  return tasksPath !== undefined ? createBenchmark({ tasksPath }) : benchmark;
+}
 
 export type BadMode = "empty" | "random" | "injection" | "same" | "refuse" | "format" | "token" | "userline";
 
