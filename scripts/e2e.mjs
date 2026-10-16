@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { benchmark, badAnswerForE2E, honestVariantsForE2E } from "../dist/index.js";
+import { benchmark, createBenchmark, badAnswerForE2E, honestVariantsForE2E } from "../dist/index.js";
 
 const execFile = promisify(execFileCallback);
 
@@ -71,17 +71,58 @@ for (const task of hidden) {
     assert.ok(task.prompt.includes(output), `${task.id} injected output missing from prompt`);
   }
 }
+
+// Task-source selection: alternate default and hidden in ONE process and check ids each time.
+const ids = (list) => list.map((task) => task.id);
+const isHidden = (id) => id.startsWith("ih-h-");
+for (const wantHidden of [false, true, false, true]) {
+  const bench = wantHidden ? createBenchmark({ tasksPath: "data/tasks-hidden.jsonl" }) : createBenchmark();
+  const list = await bench.listTasks();
+  assert.equal(list.length, 60);
+  assert.ok(
+    list.every((task) => isHidden(task.id) === wantHidden),
+    `expected ${wantHidden ? "hidden" : "public"} ids, got ${ids(list).slice(0, 3).join(",")}`,
+  );
+}
+const inline = await createBenchmark({ tasks: hidden }).listTasks();
+assert.ok(inline.every((task) => isHidden(task.id)), "{ tasks } option should serve the given list");
+
+const cliListHidden = await execFile(process.execPath, ["dist/cli.js", "list", "--tasks", "data/tasks-hidden.jsonl", "--json"], {
+  maxBuffer: 10_000_000,
+});
+assert.ok(
+  JSON.parse(cliListHidden.stdout).tasks.every((task) => isHidden(task.id)),
+  "cli list --tasks should serve the hidden split",
+);
+const cliRunHidden = await execFile(
+  process.execPath,
+  ["dist/cli.js", "run", "--model", "offline", "--provider", "mock", "--tasks", "data/tasks-hidden.jsonl", "--json"],
+  { maxBuffer: 10_000_000 },
+);
+const hiddenRun = JSON.parse(cliRunHidden.stdout);
+assert.equal(hiddenRun.rows.length, 60);
+assert.ok(hiddenRun.rows.every((row) => isHidden(row.taskId)), "cli run --tasks should grade hidden task ids");
+assert.ok(hiddenRun.instructionHierarchy, "hidden run should still carry the breakdown");
+
 const pack = await execFile("npm", ["pack", "--dry-run", "--json"], { maxBuffer: 10_000_000 });
 const packFiles = JSON.parse(pack.stdout)[0].files.map((file) => file.path);
-assert.ok(!packFiles.some((path) => path.includes("tasks-hidden")), "npm tarball must not ship the hidden split");
+assert.ok(!packFiles.some((path) => path.toLowerCase().includes("hidden")), "npm tarball must not ship any hidden-split file");
 assert.ok(packFiles.some((path) => path === "data/tasks.jsonl"), "npm tarball should ship the public tasks");
+
+// A task file outside the package data dir, only reachable via the env allow-list.
+await mkdir("artifacts", { recursive: true });
+const extraTasksPath = `${process.cwd()}/artifacts/extra-tasks.jsonl`;
+await writeFile(extraTasksPath, `${hidden.map((task) => JSON.stringify(task)).join("\n")}\n`);
 
 const probe = createNetServer();
 await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
 const address = probe.address();
 assert.ok(address && typeof address === "object");
 await new Promise((resolve) => probe.close(resolve));
-const server = spawn(process.execPath, ["dist/cli.js", "serve", String(address.port)], { stdio: ["ignore", "pipe", "pipe"] });
+const server = spawn(process.execPath, ["dist/cli.js", "serve", String(address.port)], {
+  stdio: ["ignore", "pipe", "pipe"],
+  env: { ...process.env, IH_TASKS_PATHS: extraTasksPath },
+});
 const base = `http://127.0.0.1:${address.port}`;
 const routes = {};
 async function get(path) {
@@ -117,6 +158,20 @@ try {
   const entry = (await get("/v1/index-entry")).value;
   assert.equal(entry.task_count, 60);
   assert.equal(entry.saturation, "unknown");
+  const hiddenTasks = await get("/v1/tasks?tasks=data/tasks-hidden.jsonl");
+  assert.equal(hiddenTasks.response.status, 200);
+  assert.ok(
+    hiddenTasks.value.tasks.every((task) => isHidden(task.id)),
+    "API ?tasks= should serve an in-package task file",
+  );
+  const listedTasks = await get(`/v1/tasks?tasks=${encodeURIComponent(extraTasksPath)}`);
+  assert.equal(listedTasks.response.status, 200);
+  assert.ok(
+    listedTasks.value.tasks.every((task) => isHidden(task.id)),
+    "API ?tasks= should serve an env allow-listed task file",
+  );
+  const denied = await get("/v1/tasks?tasks=artifacts/e2e-report.json");
+  assert.equal(denied.response.status, 403, "API ?tasks= should reject paths outside the allow-list");
 } finally {
   if (server.exitCode === null) {
     server.kill("SIGTERM");
