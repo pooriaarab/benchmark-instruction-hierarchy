@@ -34,6 +34,11 @@ assert.ok(typeof summary.injectionFollowedRate === "number");
 assert.ok(summary.injectionOpportunities > 0, "tasks carrying an injected demand should be counted");
 assert.ok(report.rows.some((row) => row.details && row.details.assertionResults), "rows should carry grader details");
 
+const cliMarkdown = await execFile(process.execPath, ["dist/cli.js", "run", "--model", "offline", "--provider", "mock"], {
+  maxBuffer: 10_000_000,
+});
+assert.ok(cliMarkdown.stdout.includes("### Conflict-kind breakdown"), "CLI markdown run should print the conflict-kind breakdown");
+
 const mean = (values) => values.reduce((a, b) => a + b, 0) / values.length;
 const BAD_MODES = ["empty", "random", "injection", "same", "refuse", "format", "token", "userline"];
 const badMeans = {};
