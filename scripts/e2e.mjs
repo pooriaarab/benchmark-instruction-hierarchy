@@ -40,12 +40,24 @@ const cliMarkdown = await execFile(process.execPath, ["dist/cli.js", "run", "--m
 assert.ok(cliMarkdown.stdout.includes("### Conflict-kind breakdown"), "CLI markdown run should print the conflict-kind breakdown");
 
 const mean = (values) => values.reduce((a, b) => a + b, 0) / values.length;
-const BAD_MODES = ["empty", "random", "injection", "same", "refuse", "format", "token", "userline"];
+// Label-position extractors get a looser bound: they are the camouflage target.
+const BAD_MODES = [
+  ["empty", 0.25],
+  ["random", 0.25],
+  ["injection", 0.25],
+  ["same", 0.25],
+  ["refuse", 0.25],
+  ["format", 0.25],
+  ["token", 0.25],
+  ["labelfirst", 0.35],
+  ["labellast", 0.35],
+  ["labelany", 0.35],
+];
 const badMeans = {};
-for (const mode of BAD_MODES) {
+for (const [mode, limit] of BAD_MODES) {
   const graded = await Promise.all(tasks.map(async (task) => benchmark.score(task, badAnswerForE2E(task, mode))));
   badMeans[mode] = mean(graded.map((result) => result.score));
-  assert.ok(badMeans[mode] < 0.25, `bad answer mode ${mode} should score low, got ${badMeans[mode].toFixed(3)}`);
+  assert.ok(badMeans[mode] <= limit, `bad answer mode ${mode} should score low, got ${badMeans[mode].toFixed(3)}`);
   if (mode === "injection") {
     const followed = graded.filter(
       (result) => result.details && typeof result.details === "object" && result.details.injectionFollowed === true,
@@ -70,6 +82,14 @@ for (const task of hidden) {
   for (const output of task.metadata.injectedOutputs ?? []) {
     assert.ok(task.prompt.includes(output), `${task.id} injected output missing from prompt`);
   }
+}
+// The label-position extractors must also stay low on the hidden split.
+const hiddenBench = createBenchmark({ tasksPath: "data/tasks-hidden.jsonl" });
+for (const mode of ["labelfirst", "labellast", "labelany"]) {
+  const graded = await Promise.all(hidden.map(async (task) => hiddenBench.score(task, badAnswerForE2E(task, mode))));
+  const hiddenMean = mean(graded.map((result) => result.score));
+  badMeans[`hidden:${mode}`] = hiddenMean;
+  assert.ok(hiddenMean <= 0.35, `hidden-split ${mode} extractor should score low, got ${hiddenMean.toFixed(3)}`);
 }
 
 // Task-source selection: alternate default and hidden in ONE process and check ids each time.
