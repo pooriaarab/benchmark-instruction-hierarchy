@@ -123,5 +123,3 @@ export function badAnswerForE2E(task: Task, mode: BadMode): Trace {
       return { answer: "" };
   }
 }
-
-
