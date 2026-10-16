@@ -45,7 +45,12 @@ function runAssertion(answer: string, assertion: Assertion): { pass: boolean; re
         : { pass: false, reason: `${tag}forbidden text "${assertion.value}" present` };
     }
     case "regex": {
-      const re = new RegExp(assertion.pattern, assertion.flags ?? "m");
+      let re: RegExp;
+      try {
+        re = new RegExp(assertion.pattern, assertion.flags ?? "m");
+      } catch {
+        return { pass: false, reason: `${tag}invalid regex /${assertion.pattern}/` };
+      }
       return re.test(answer.trim())
         ? { pass: true, reason: `${tag}regex ok` }
         : { pass: false, reason: `${tag}regex /${assertion.pattern}/ failed` };
