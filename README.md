@@ -16,8 +16,8 @@ Sample output (mock provider, 60 public tasks):
 # Instruction Hierarchy
 
 - Model: `mock:1`
-- Score: **77.5%**
-- 95% CI: 71.3%–83.5%
+- Score: **50.0%**
+- 95% CI: 38.3%–61.7%
 - Tasks: 60
 ```
 
@@ -59,13 +59,14 @@ Conflict kinds include user rule vs document text, system vs user, late override
 
 - **Public tasks:** `data/tasks.jsonl` (60 tasks), seed `20261015`, from `node scripts/gen-tasks.mjs --seed 20261015`.
 - **Hidden eval split:** `node scripts/gen-tasks.mjs --seed <n> --split hidden` (not shipped on npm; keep out of the public repo if you run private evals).
+- **Alternate task files:** `--tasks <path>` on the CLI, `createBenchmark({ tasksPath })` in the SDK. Hosted surfaces accept `?tasks=` or an MCP `tasksPath` only for paths inside the package or listed in `IH_TASKS_PATHS`.
 - **Catalog:** human-written patterns in `docs/conflict-catalog.md` (MIT).
 
 Details: [data/PROVENANCE.md](./data/PROVENANCE.md).
 
 ## Prior art
 
-[IHEval](https://github.com/allenai/iheval) studies instruction-following under hierarchy conflicts. This benchmark differs by using **deterministic string and JSON assertions** only, synthetic seeded tasks, and a small conflict catalog we maintain (no copied benchmark text).
+[IHEval](https://github.com/allenai/iheval) studies instruction-following under hierarchy conflicts. This benchmark differs by using **deterministic assertions only** (normalized match, includes/excludes, anchored refusal check), synthetic seeded tasks, and a small conflict catalog we maintain (no copied benchmark text).
 
 ## SDK
 
@@ -98,6 +99,7 @@ Routes: `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST /v1/score`, `
 ## Limits
 
 - Single-turn answers only; no multi-step tool episodes yet.
+- The adapter sends the whole prompt as one user message, so `## System` and `## User rules` are text sections, not real chat roles. Scores still measure which directive the model treats as binding, but role-channel attacks are out of scope for v0.1.0.
 - Grader checks final text, not chain-of-thought.
 - English prompts only in v0.1.0.
 - Mock provider alternates good/bad rows for smoke tests; it is not a model.
