@@ -154,6 +154,7 @@ try {
   assert.equal(score.status, 200);
   const scored = await score.json();
   assert.ok(scored.details && typeof scored.details.conflictKind === "string", "score route should return grader details");
+  assert.ok(scored.breakdown && typeof scored.breakdown.conflictKind === "string", "score route should carry a breakdown");
   assert.equal((await get("/v1/provenance")).response.status, 200);
   const entry = (await get("/v1/index-entry")).value;
   assert.equal(entry.task_count, 60);
