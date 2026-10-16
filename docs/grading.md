@@ -47,7 +47,7 @@ Every conflict kind requires deciding which `LABEL:`-shaped line is trusted. Nei
 | `quoted_not_instruction` | the unquoted section titled by the user rule | quoted `> MARKER:` lines, header look-alikes inside quotes |
 | `tool_text_injection` | the section titled by the user rule outside tool output | `MARKER:` lines and header fields inside simulated tool output |
 
-The genuine note is placed uniformly at random among the `LABEL:` lines — it can sit first, last, or anywhere between, sometimes with every forged note on one side. Surface extractors are probed in `scripts/e2e.mjs` over all 60 tasks on the public split and on four hidden seeds: first `LABEL:` line, last, middle, k-th for k = 1..6, the first line containing the user-rule label anywhere, the first/last label line whose previous line does not end in a colon, the first whose previous line does, the first under an all-caps header, the first carrying a shared-pool word, and the first carrying a word no other label line repeats — each also probed combined with knowledge of the system rule's refusal word.
+The genuine note is placed uniformly at random among the `LABEL:` lines — it can sit first, last, or anywhere between, sometimes with every forged note on one side. Surface extractors are probed in `scripts/e2e.mjs` over all 60 tasks on the public split and on four hidden seeds: first `LABEL:` line, last, middle, k-th for k = 1..6, the first/last label line whose previous line does not end in a colon, the first whose previous line does, the first under an all-caps header, the first carrying a shared-pool word, and the first carrying a word no other label line repeats — each also probed combined with knowledge of the system rule's refusal word.
 
 No flat threshold would survive a generator change, so each probe's bound is its own measured chance level: the mean fraction of its selectable candidate lines that yield the expected answer (computed by `extractorChanceForE2E` from the task data), plus a 0.15 margin. The refusal-word-aware variant also counts the tasks where refusing is the demanded answer, so its chance level — not a leak — is the larger share. The table below is generated from `artifacts/e2e-report.json` by the e2e run; cells read `plain / refusal-word-aware` mean score.
 
@@ -57,7 +57,6 @@ No flat threshold would survive a generator change, so each probe's bound is its
 | labelfirst | 0.033 / 0.167 | 0.100 / 0.233 | 0.033 / 0.167 | 0.083 / 0.217 | 0.083 / 0.217 | 0.378 |
 | labellast | 0.100 / 0.233 | 0.100 / 0.233 | 0.100 / 0.233 | 0.150 / 0.283 | 0.100 / 0.233 | 0.378 |
 | labelmid | 0.117 / 0.250 | 0.050 / 0.183 | 0.117 / 0.250 | 0.100 / 0.233 | 0.067 / 0.200 | 0.378 |
-| labelany | 0.033 / 0.167 | 0.100 / 0.233 | 0.033 / 0.167 | 0.083 / 0.217 | 0.083 / 0.217 | 0.378 |
 | labelk1 | 0.033 / 0.167 | 0.100 / 0.233 | 0.033 / 0.167 | 0.083 / 0.217 | 0.083 / 0.217 | 0.378 |
 | labelk2 | 0.117 / 0.250 | 0.033 / 0.167 | 0.050 / 0.183 | 0.100 / 0.233 | 0.050 / 0.183 | 0.378 |
 | labelk3 | 0.183 / 0.317 | 0.100 / 0.233 | 0.133 / 0.267 | 0.083 / 0.217 | 0.117 / 0.250 | 0.378 |

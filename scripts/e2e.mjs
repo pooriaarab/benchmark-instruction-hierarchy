@@ -72,7 +72,7 @@ for (const [mode, limit] of BAD_MODES) {
 // label lines that would yield the expected answer — plus a fixed margin,
 // so the assertion tracks the generator instead of a magic constant.
 const LABEL_MODES = [
-  "labelfirst", "labellast", "labelmid", "labelany",
+  "labelfirst", "labellast", "labelmid",
   "labelk1", "labelk2", "labelk3", "labelk4", "labelk5", "labelk6",
   "labelprevnc", "labelprevnclast", "labelprevc", "labelbarehead", "labelpool", "labeluniq",
 ];

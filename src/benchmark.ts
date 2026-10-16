@@ -130,7 +130,6 @@ export type BadMode =
   | "labelfirst"
   | "labellast"
   | "labelmid"
-  | "labelany"
   | "labelk1"
   | "labelk2"
   | "labelk3"
@@ -273,7 +272,6 @@ const LABEL_MODES: Record<string, { sel: LabelSelect; at: "first" | "last" | "mi
   labelfirst: { sel: "all", at: "first" },
   labellast: { sel: "all", at: "last" },
   labelmid: { sel: "all", at: "mid" },
-  labelany: { sel: "all", at: "first" },
   labelk1: { sel: "all", at: 1 },
   labelk2: { sel: "all", at: 2 },
   labelk3: { sel: "all", at: 3 },
