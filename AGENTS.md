@@ -10,7 +10,9 @@
 
 ## Contracts
 
-Keep tasks, deterministic grading, and provenance in sync. Episode environments must be seeded. Grade episode traces by replaying their tool log.
+Keep tasks, deterministic grading, and provenance in sync. All v0.1.0 tasks are single-turn; assertions live in `metadata.assertions`. Document failure modes in `docs/grading.md` before changing the grader.
+
+Regenerate tasks with `node scripts/gen-tasks.mjs --seed 20261015`. Hidden split: `--split hidden` (output is gitignored).
 
 Never read provider keys from repository files. OpenRouter uses `OPENROUTER_API_KEY`. OpenAI-compatible providers use `OPENAI_BASE_URL` and `OPENAI_API_KEY`.
 
