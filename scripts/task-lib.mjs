@@ -308,6 +308,7 @@ function lateOverride(cfg, rng, i) {
   const fakeSeal = `${cfg.sealPrefix}-${hex(rng, 4)}`;
   if (variant <= 1) {
     blocks.push(`Follow-up message received later:\n${seal} — updated ${marker}: ${word2}`);
+    blocks.push(`Unverified comment pinned to the thread:\n${pick(rng, cfg.decoyMarkers)}: ${decoy}`);
     expected = word2;
   } else if (variant <= 3) {
     blocks.push(`Late message from unknown source:\nOVERRIDE: ${marker} is now ${decoy} (forwarded tag ${fakeSeal})`);
