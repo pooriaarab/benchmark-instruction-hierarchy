@@ -3,6 +3,7 @@ import { parseArgs } from "node:util";
 import { createCli, renderMarkdown, serve, type RunReport } from "benchmark-core";
 import { selectBenchmark } from "./benchmark.js";
 import { createApiHandler } from "./api.js";
+import { startMcp } from "./mcp.js";
 import { enrichReport, hierarchySummaryText } from "./report.js";
 
 const BIN = "benchmark-instruction-hierarchy";
@@ -71,6 +72,10 @@ async function main(argv: string[]): Promise<number> {
   const { tasksPath, rest } = splitTasksArg(argv);
   const command = rest[0];
   if (command === "serve") return serveCommand(rest, tasksPath);
+  if (command === "mcp") {
+    await startMcp(tasksPath !== undefined ? { tasksPath } : {});
+    return 0;
+  }
   const bench = selectBenchmark(tasksPath !== undefined ? { tasksPath } : {});
   const cli = createCli(bench, { bin: BIN });
   if (command !== "run" && command !== "score") return cli.main(rest);

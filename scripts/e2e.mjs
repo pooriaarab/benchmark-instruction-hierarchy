@@ -179,7 +179,16 @@ try {
   }
 }
 
-const transport = new StdioClientTransport({ command: process.execPath, args: ["dist/cli.js", "mcp"], cwd: process.cwd(), stderr: "pipe" });
+const transport = new StdioClientTransport({
+  command: process.execPath,
+  args: ["dist/cli.js", "mcp"],
+  cwd: process.cwd(),
+  stderr: "pipe",
+  env: {
+    OPENROUTER_API_KEY: "e2e-stub-key",
+    NODE_OPTIONS: `--import ${process.cwd()}/scripts/mock-model-fetch.mjs`,
+  },
+});
 const client = new Client({ name: "benchmark-instruction-hierarchy-e2e", version: "0.1.0" });
 await client.connect(transport);
 let toolNames;
@@ -192,13 +201,35 @@ try {
     ["get_task", { taskId: "ih-001" }],
     ["score_answer", { taskId: "ih-001", submission: report.rows[0].submission }],
     ["get_provenance", {}],
-    ["run_benchmark", { model: "offline" }],
   ];
   for (const [name, args] of calls) {
     const result = await client.callTool({ name, arguments: args });
-    if (name === "run_benchmark") assert.equal(result.isError, true);
-    else assert.notEqual(result.isError, true);
+    assert.notEqual(result.isError, true);
+    if (name === "score_answer") {
+      const scored = JSON.parse(result.content[0].text);
+      assert.ok(scored.breakdown && typeof scored.breakdown.conflictKind === "string", "score_answer should carry a breakdown");
+    }
   }
+  const hiddenList = await client.callTool({ name: "list_tasks", arguments: { tasksPath: "data/tasks-hidden.jsonl" } });
+  assert.notEqual(hiddenList.isError, true);
+  assert.ok(
+    JSON.parse(hiddenList.content[0].text).tasks.every((task) => isHidden(task.id)),
+    "MCP list_tasks should serve an allow-listed split",
+  );
+  const deniedList = await client.callTool({ name: "list_tasks", arguments: { tasksPath: "/etc/hostname" } });
+  assert.equal(deniedList.isError, true, "MCP list_tasks should reject paths outside the allow-list");
+  const runResult = await client.callTool({ name: "run_benchmark", arguments: { model: "stub/e2e" } });
+  assert.notEqual(runResult.isError, true);
+  const mcpReport = JSON.parse(runResult.content[0].text);
+  assert.equal(mcpReport.rows.length, 60, "MCP run should cover all tasks");
+  const mcpSummary = mcpReport.instructionHierarchy;
+  assert.ok(mcpSummary && typeof mcpSummary === "object", "MCP run should carry the instructionHierarchy breakdown");
+  assert.deepEqual(
+    Object.keys(mcpSummary.byConflictKind).sort(),
+    ["format_persistence", "late_override", "quoted_not_instruction", "system_vs_user", "tool_text_injection", "user_vs_document"],
+  );
+  assert.ok(mcpSummary.injectionOpportunities > 0);
+  assert.ok(mcpReport.rows.every((row) => row.details && row.details.assertionResults), "MCP rows should keep grader details");
 } finally {
   await client.close();
 }
