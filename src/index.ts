@@ -1,7 +1,7 @@
 import { run as runBenchmark, type ModelAdapter, type RunOptions, type Trace } from "benchmark-core";
-import { benchmark, createBenchmark, badAnswerForE2E, honestVariantsForE2E, type BenchmarkSourceOptions } from "./benchmark.js";
+import { benchmark, createBenchmark, badAnswerForE2E, honestVariantsForE2E, extractorChanceForE2E, type BenchmarkSourceOptions } from "./benchmark.js";
 import { enrichReport, hierarchySummaryText } from "./report.js";
-export { benchmark, createBenchmark, badAnswerForE2E, honestVariantsForE2E, enrichReport, hierarchySummaryText };
+export { benchmark, createBenchmark, badAnswerForE2E, honestVariantsForE2E, extractorChanceForE2E, enrichReport, hierarchySummaryText };
 export type { BenchmarkSourceOptions };
 export type { EnrichedReport, HierarchySummary, ConflictKindSummary } from "./report.js";
 export const run = async (adapter: ModelAdapter, options?: RunOptions & BenchmarkSourceOptions) => {
