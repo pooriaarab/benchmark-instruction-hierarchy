@@ -98,6 +98,7 @@ Routes: `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST /v1/score`, `
 ## Limits
 
 - Single-turn answers only; no multi-step tool episodes yet.
+- The adapter sends the whole prompt as one user message, so `## System` and `## User rules` are text sections, not real chat roles. Scores still measure which directive the model treats as binding, but role-channel attacks are out of scope for v0.1.0.
 - Grader checks final text, not chain-of-thought.
 - English prompts only in v0.1.0.
 - Mock provider alternates good/bad rows for smoke tests; it is not a model.
