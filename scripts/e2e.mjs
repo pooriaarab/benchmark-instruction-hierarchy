@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { benchmark, badAnswerForE2E } from "../dist/index.js";
+import { benchmark, badAnswerForE2E, honestVariantsForE2E } from "../dist/index.js";
 
 const execFile = promisify(execFileCallback);
 
@@ -24,13 +24,52 @@ const badScores = report.rows.filter((row) => row.score < 0.75);
 assert.ok(goodScores.length >= 20, "mock should score well on some tasks");
 assert.ok(badScores.length >= 20, "mock should score poorly on some tasks");
 
-const sample = tasks[0];
-for (const mode of ["empty", "random", "injection", "same"]) {
-  const graded = await benchmark.score(sample, badAnswerForE2E(sample, mode));
-  assert.ok(graded.score < 0.75, `bad answer mode ${mode} should score low`);
+const summary = report.instructionHierarchy;
+assert.ok(summary && typeof summary === "object", "run report should carry an instructionHierarchy summary");
+assert.deepEqual(
+  Object.keys(summary.byConflictKind).sort(),
+  ["format_persistence", "late_override", "quoted_not_instruction", "system_vs_user", "tool_text_injection", "user_vs_document"],
+);
+assert.ok(typeof summary.injectionFollowedRate === "number");
+assert.ok(summary.injectionOpportunities > 0, "tasks carrying an injected demand should be counted");
+assert.ok(report.rows.some((row) => row.details && row.details.assertionResults), "rows should carry grader details");
+
+const mean = (values) => values.reduce((a, b) => a + b, 0) / values.length;
+const BAD_MODES = ["empty", "random", "injection", "same", "refuse", "format", "token", "userline"];
+const badMeans = {};
+for (const mode of BAD_MODES) {
+  const graded = await Promise.all(tasks.map(async (task) => benchmark.score(task, badAnswerForE2E(task, mode))));
+  badMeans[mode] = mean(graded.map((result) => result.score));
+  assert.ok(badMeans[mode] < 0.25, `bad answer mode ${mode} should score low, got ${badMeans[mode].toFixed(3)}`);
+  if (mode === "injection") {
+    const followed = graded.filter(
+      (result) => result.details && typeof result.details === "object" && result.details.injectionFollowed === true,
+    ).length;
+    assert.ok(followed > 0, "echo-the-injection answers should set injectionFollowed");
+  }
 }
-const goodGraded = await benchmark.score(sample, { answer: String(sample.expected) });
-assert.ok(goodGraded.score >= 0.99, "canonical expected answer should score high");
+
+for (const task of tasks) {
+  for (const variant of honestVariantsForE2E(task)) {
+    const graded = await benchmark.score(task, { answer: variant });
+    assert.ok(graded.score >= 0.99, `honest variant ${JSON.stringify(variant)} for ${task.id} should score high, got ${graded.score}`);
+  }
+}
+
+await execFile(process.execPath, ["scripts/gen-tasks.mjs", "--seed", "7", "--split", "hidden"]);
+const hidden = (await readFile("data/tasks-hidden.jsonl", "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+assert.equal(hidden.length, 60);
+const identicalExpected = tasks.filter((task, index) => task.expected === hidden[index].expected).length;
+assert.ok(identicalExpected <= 5, `hidden split should differ in answers, ${identicalExpected} identical`);
+for (const task of hidden) {
+  for (const output of task.metadata.injectedOutputs ?? []) {
+    assert.ok(task.prompt.includes(output), `${task.id} injected output missing from prompt`);
+  }
+}
+const pack = await execFile("npm", ["pack", "--dry-run", "--json"], { maxBuffer: 10_000_000 });
+const packFiles = JSON.parse(pack.stdout)[0].files.map((file) => file.path);
+assert.ok(!packFiles.some((path) => path.includes("tasks-hidden")), "npm tarball must not ship the hidden split");
+assert.ok(packFiles.some((path) => path === "data/tasks.jsonl"), "npm tarball should ship the public tasks");
 
 const probe = createNetServer();
 await new Promise((resolve) => probe.listen(0, "127.0.0.1", resolve));
@@ -67,8 +106,12 @@ try {
   });
   routes["POST /v1/score"] = score.status;
   assert.equal(score.status, 200);
+  const scored = await score.json();
+  assert.ok(scored.details && typeof scored.details.conflictKind === "string", "score route should return grader details");
   assert.equal((await get("/v1/provenance")).response.status, 200);
-  assert.equal((await get("/v1/index-entry")).value.task_count, 60);
+  const entry = (await get("/v1/index-entry")).value;
+  assert.equal(entry.task_count, 60);
+  assert.equal(entry.saturation, "unknown");
 } finally {
   if (server.exitCode === null) {
     server.kill("SIGTERM");
@@ -103,6 +146,8 @@ try {
 const artifact = {
   task_count: report.rows.length,
   scores: report.rows.map((row) => row.score),
+  bad_answer_means: badMeans,
+  instruction_hierarchy: summary,
   route_status_codes: routes,
   tool_names: toolNames,
 };

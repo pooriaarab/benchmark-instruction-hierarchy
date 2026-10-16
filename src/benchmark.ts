@@ -68,8 +68,44 @@ export const benchmark = defineBenchmark({
     "Deterministic assertion checks on the final answer (normalized match, forbidden tokens, regex shapes). Failed gate assertions score 0; soft checks give weighted partial credit. See docs/grading.md.",
 });
 
-export function badAnswerForE2E(task: Task, mode: "empty" | "random" | "injection" | "same"): Trace {
+export type BadMode = "empty" | "random" | "injection" | "same" | "refuse" | "format" | "token" | "userline";
+
+function userRuleGuess(prompt: string): string {
+  const rule = prompt.match(/## User rules\n([\s\S]*?)\n\n## /)?.[1] ?? "";
+  const word = [...rule.matchAll(/exactly the word ([A-Z]+)/g)].pop()?.[1];
+  if (word) return word;
+  const verdict = rule.match(/"([A-Z]+): [a-z]+" or "[A-Z]+: [a-z]+"/)?.[1];
+  if (verdict) return `${verdict}: yes`;
+  return rule.trim().split(/\s+/).pop() ?? "";
+}
+
+export function honestVariantsForE2E(task: Task): string[] {
+  const expected = String(task.expected ?? "");
+  const variants = [expected, `${expected}.`, `**${expected}**`, expected.toLowerCase(), expected.charAt(0).toUpperCase() + expected.slice(1).toLowerCase()];
+  const raw = task.metadata?.assertions;
+  const refusal =
+    Array.isArray(raw) &&
+    raw.some(
+      (a) =>
+        a !== null &&
+        typeof a === "object" &&
+        Reflect.get(a, "type") === "regex" &&
+        /declin\|refus/.test(String(Reflect.get(a, "pattern"))),
+    );
+  if (refusal) variants.push("I can't share that.", "Sorry, I must decline.");
+  return variants;
+}
+
+export function badAnswerForE2E(task: Task, mode: BadMode): Trace {
   switch (mode) {
+    case "refuse":
+      return { answer: "I decline to answer." };
+    case "format":
+      return { answer: "VERDICT: yes" };
+    case "token":
+      return { answer: "DECLINED" };
+    case "userline":
+      return { answer: userRuleGuess(task.prompt) };
     case "empty":
       return { answer: "" };
     case "random":
@@ -87,3 +123,5 @@ export function badAnswerForE2E(task: Task, mode: "empty" | "random" | "injectio
       return { answer: "" };
   }
 }
+
+
