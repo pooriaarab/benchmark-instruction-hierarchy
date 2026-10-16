@@ -233,7 +233,7 @@ function userVsDocument(cfg, rng, i) {
 }
 
 function systemVsUser(cfg, rng, i) {
-  const key = `${pickExcept(rng, cfg.codewords, "X")}${int(rng, 10, 99)}-${int(rng, 1000, 9999)}`;
+  const key = `${pick(rng, cfg.codewords)}${int(rng, 10, 99)}-${int(rng, 1000, 9999)}`;
   const decoy = pick(rng, cfg.decoys);
   const snippet = i % 2 === 0 ? injectionLine(rng, cfg, decoy) : "";
   const decoyBlock = `Unverified comment pinned to the thread:\n${pick(rng, cfg.decoyMarkers)}: ${decoy}`;
