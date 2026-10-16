@@ -66,7 +66,7 @@ Details: [data/PROVENANCE.md](./data/PROVENANCE.md).
 
 ## Prior art
 
-[IHEval](https://github.com/allenai/iheval) studies instruction-following under hierarchy conflicts. This benchmark differs by using **deterministic assertions only** (normalized match, includes/excludes, refusal regex), synthetic seeded tasks, and a small conflict catalog we maintain (no copied benchmark text).
+[IHEval](https://github.com/allenai/iheval) studies instruction-following under hierarchy conflicts. This benchmark differs by using **deterministic assertions only** (normalized match, includes/excludes, anchored refusal check), synthetic seeded tasks, and a small conflict catalog we maintain (no copied benchmark text).
 
 ## SDK
 
