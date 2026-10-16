@@ -4,21 +4,28 @@
 
 [AI Benchmark Index](https://private-repo-337e.com/benchmarks/benchmark-instruction-hierarchy) · [npm](https://www.npmjs.com/package/benchmark-instruction-hierarchy) · [API](#http-api) · [MCP](#model-context-protocol)
 
-benchmark-instruction-hierarchy is an open-source AI model benchmark for safety tasks. It measures this behavior: Do your rules survive a long context full of conflicting text?
+Instruction Hierarchy measures whether a model keeps **user and system rules** when long context, documents, quotes, and fake tool output push conflicting directives. Each task is a single turn with machine-checkable assertions (no LLM judge).
 
 ```bash
-npx benchmark-instruction-hierarchy run --model offline --provider mock --json
+npx benchmark-instruction-hierarchy run --model offline --provider mock
 ```
 
-```json
-{"model":"mock:1","mean":0.5,"totals":{"tasks":2,"passed":1,"failed":0}}
+Sample output (mock provider, 60 public tasks):
+
+```text
+# Instruction Hierarchy
+
+- Model: `mock:1`
+- Score: **77.5%**
+- 95% CI: 71.3%–83.5%
+- Tasks: 60
 ```
 
-The starter data comes from a committed seeded generator. Seed 20261015 reproduces the public tasks.
+No public leaderboard yet (OpenRouter runs need your key). The mock run above is reproducible offline.
 
 ## Install
 
-benchmark-instruction-hierarchy requires Node.js 20 or newer.
+Node.js 20 or newer.
 
 ```bash
 npm install benchmark-instruction-hierarchy
@@ -26,142 +33,85 @@ npm install benchmark-instruction-hierarchy
 
 ## Run your first benchmark
 
-The mock provider needs no key or network access.
-
 ```bash
 npx benchmark-instruction-hierarchy run --model offline --provider mock
 ```
 
-A successful run prints two scored rows and a mean of 0.5.
+## Real models (OpenRouter)
+
+```bash
+export OPENROUTER_API_KEY=your_key
+npx benchmark-instruction-hierarchy run --model anthropic/claude-sonnet-4 --provider openrouter
+```
+
+Use any OpenRouter model id. Scores are the mean of per-task assertion pass rates (0–1).
 
 ## How it works
 
 ```text
-tasks.jsonl -> model adapter -> deterministic grader -> report
+tasks.jsonl -> model adapter -> assertion grader -> report
                          |-> CLI / SDK / MCP / HTTP API
 ```
 
-The runner keeps task order and records score, reason, latency, retries, usage, and cost when available.
+Conflict kinds include user rule vs document text, system vs user, late override attempts, format persistence, quoted-but-not-instruction lines, and tool-output injection. See [docs/conflict-catalog.md](./docs/conflict-catalog.md) and [docs/grading.md](./docs/grading.md).
 
-## Why it exists
+## Data and provenance
 
-General model leaderboards do not isolate safety behavior. This package keeps the task data, grading rules, and provenance together for inspection.
+- **Public tasks:** `data/tasks.jsonl` (60 tasks), seed `20261015`, from `node scripts/gen-tasks.mjs --seed 20261015`.
+- **Hidden eval split:** `node scripts/gen-tasks.mjs --seed <n> --split hidden` (not shipped on npm; keep out of the public repo if you run private evals).
+- **Catalog:** human-written patterns in `docs/conflict-catalog.md` (MIT).
 
-## Compare
+Details: [data/PROVENANCE.md](./data/PROVENANCE.md).
 
-Checked on 2026-10-15.
+## Prior art
 
-| Property | benchmark-instruction-hierarchy | General chat leaderboard | Ad hoc prompt test |
-| --- | --- | --- | --- |
-| Target | Do your rules survive a long context full of conflicting text? | Broad model quality | One local example |
-| Grading | Deterministic code | Varies | Manual |
-| Offline run | Mock provider | Varies | Varies |
-| Provenance | Package record | Varies | Usually absent |
-
-## Coverage
-
-| Surface | Status |
-| --- | --- |
-| single tasks | Included |
-| SDK | Included |
-| CLI | Included |
-| MCP server | Included |
-| HTTP API | Included |
-
-The E2E gate checks every listed surface against the package source.
-
-## Common use cases
-
-1. **Model developers:** compare adapters with the same seeded tasks.
-2. **Agent developers:** inspect task-level failures before changing prompts.
-3. **Release teams:** run the mock gate before publishing a data update.
-4. **Researchers:** export per-task scores for a reproducible analysis.
-
-## Features
-
-- **Deterministic grading:** Each row includes a score and reason.
-- **Reproducible data:** A committed seeded script creates the public tasks.
-- **Share cards:** The `card` command writes a 1200×630 SVG.
-- **Provenance:** Code and Markdown carry the same source record.
+[IHEval](https://github.com/allenai/iheval) studies instruction-following under hierarchy conflicts. This benchmark differs by using **deterministic string and JSON assertions** only, synthetic seeded tasks, and a small conflict catalog we maintain (no copied benchmark text).
 
 ## SDK
 
 ```ts
 import { benchmark, run, score } from "benchmark-instruction-hierarchy";
+import { mockAdapter } from "benchmark-core";
+
+const report = await run(mockAdapter());
+console.log(report.mean);
 ```
 
-`run(adapter, options)` creates a report. `score(taskId, submission)` grades one trace.
-
-## CLI
-
-Commands are `list`, `show`, `run`, `score`, `card`, `provenance`, `index-entry`, `serve`, and `mcp`. Pass `--json` for machine-readable output.
-
-## Model Context Protocol
-
-Start the MCP stdio server:
+## MCP
 
 ```bash
 npx benchmark-instruction-hierarchy mcp
 ```
 
-Tools are `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, and `get_provenance`.
+Tools: `list_tasks`, `get_task`, `score_answer`, `run_benchmark`, `get_provenance`.
 
 ## HTTP API
 
-Import `handler` from `benchmark-instruction-hierarchy/api`, or run `npx benchmark-instruction-hierarchy serve`. Routes are `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST /v1/score`, `GET /v1/provenance`, and `GET /v1/index-entry`.
+Import `handler` from `benchmark-instruction-hierarchy/api`, or:
 
-## Data provenance
+```bash
+npx benchmark-instruction-hierarchy serve 8787
+```
 
-`data/tasks.jsonl` contains the public tasks. `data/PROVENANCE.md` names the generator, seed, licence, cutoff, and refresh steps. Run `npm run generate:tasks` to rebuild tasks and `npm run provenance` after a build.
+Routes: `GET /health`, `GET /v1/tasks`, `GET /v1/tasks/:id`, `POST /v1/score`, `GET /v1/provenance`, `GET /v1/index-entry`.
 
 ## Limits
 
-The starter tasks prove package wiring, not model quality. Replace them before publishing a real benchmark. Public tasks can enter training data. Keep a separately seeded hidden split for final comparisons. Remote providers can add cost and retain prompts under their own policies.
-
-## Integration guides
-
-- [TypeScript SDK integration](#sdk)
-- [Model Context Protocol integration](#model-context-protocol)
-- [HTTP API integration](#http-api)
-
-## Status
-
-Version 0.1.0 is alpha. Task schemas and grading may change before 1.0. Report defects through the GitHub issue tracker. Public case studies are not yet published.
+- Single-turn answers only; no multi-step tool episodes yet.
+- Grader checks final text, not chain-of-thought.
+- English prompts only in v0.1.0.
+- Mock provider alternates good/bad rows for smoke tests; it is not a model.
 
 ## FAQ
 
-### What does benchmark-instruction-hierarchy measure?
+### What does it measure?
 
-benchmark-instruction-hierarchy measures this behavior: Do your rules survive a long context full of conflicting text? The committed grader defines the exact pass conditions.
+Whether the model follows the right rule layer when untrusted text disagrees.
 
-### Can benchmark-instruction-hierarchy run offline?
+### Can it run offline?
 
-benchmark-instruction-hierarchy runs end to end with the mock provider and no key. Real model runs need a configured provider.
+Yes, with `--provider mock`.
 
-### Which providers work?
+### License
 
-benchmark-instruction-hierarchy supports OpenRouter, an OpenAI-compatible base URL, and the offline mock adapter through benchmark-core.
-
-### Does benchmark-instruction-hierarchy provide a hosted service?
-
-benchmark-instruction-hierarchy provides a server you run. It does not provide a managed benchmark service.
-
-### Where do the tasks come from?
-
-benchmark-instruction-hierarchy ships seeded synthetic starter tasks. The provenance file explains how to reproduce and refresh them.
-
-### How are answers graded?
-
-benchmark-instruction-hierarchy uses exact match for single answers and simulator replay for episode traces. Model judging is off.
-
-### How is this different from a general leaderboard?
-
-benchmark-instruction-hierarchy measures one named behavior with inspectable tasks and grading. General leaderboards combine broader capabilities.
-
-### Can I use a hidden split?
-
-benchmark-instruction-hierarchy supports the same schema for public and hidden tasks. Keep hidden data outside the npm package and public repository.
-
-## License
-
-[MIT](LICENSE) © Pooria Arab
+MIT. See [LICENSE](./LICENSE).
