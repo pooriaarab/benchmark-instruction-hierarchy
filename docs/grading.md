@@ -10,7 +10,7 @@ Each task stores an `assertions` list in `metadata`. Supported types:
 - `equals` — byte-exact match after trimming (legacy; new tasks use `match`).
 - `includes` — the answer must contain `value` (`caseSensitive` optional, default false).
 - `excludes` — the answer must not contain `value` (`caseSensitive` optional, default false).
-- `regex` — `pattern` must match the normalized answer (`flags` optional, default `m`). An invalid pattern or `flags` fails that assertion instead of aborting the run.
+- `regex` — `pattern` must match the normalized answer, so write patterns lowercase or use the `i` flag (`flags` optional, default `m`). An invalid pattern or `flags` fails that assertion instead of aborting the run.
 
 Each assertion may set `gate` (default `true`) and `weight` (default `1`).
 
