@@ -20,7 +20,7 @@ class StarterEnvironment implements Environment {
 }
 export const benchmark = defineBenchmark({
   id: "benchmark-instruction-hierarchy", name: "Instruction Hierarchy", tagline: "Do your rules survive a long context full of conflicting text?", tags: ["helpful","science"], category: "safety",
-  whatItMeasures: "Do your rules survive a long context full of conflicting text?", version: "0.1.0", status: "alpha", loadTasks,
+  whatItMeasures: "Whether a model keeps user and system rules when documents, quotes, and tool output contain conflicting or injected directives.", version: "0.1.0", status: "alpha", loadTasks,
   async grade(task, submission, context) {
     if (task.kind === "single") return submission.answer === undefined ? { score: 0, reason: "Submission has no answer." } : exactMatch(task.expected ?? null, submission.answer);
     const state = await replay(new StarterEnvironment(), task, submission.toolLog ?? [], context.seed) as { finished?: boolean };
@@ -31,11 +31,18 @@ export const benchmark = defineBenchmark({
     good: (task) => task.kind === "episode" ? [{ toolCalls: [{ name: "finish_task", args: {} }] }] : [],
     bad: (task) => task.kind === "episode" ? [{ content: "Skipped the tool." }] : [],
   },
-  provenance: [{
-    name: "Seeded starter task generator", kind: "synthetic", url: "https://github.com/pooriaarab/benchmark-instruction-hierarchy/blob/main/scripts/gen-tasks.mjs",
-    licence: "MIT", howToGet: "Run `node scripts/gen-tasks.mjs` from the repository root.", retrievedAt: "2026-10-15T00:00:00.000Z",
-    contaminationNotes: "Public starter tasks generated with seed 20261015. Keep final evaluation tasks in a separately seeded hidden split.",
-    refresh: "Change the seed, run the generator, and review the JSONL diff.",
-  }],
+  provenance: [
+    {
+      name: "Seeded instruction-hierarchy task generator", kind: "synthetic", url: "https://github.com/pooriaarab/benchmark-instruction-hierarchy/blob/main/scripts/gen-tasks.mjs",
+      licence: "MIT", howToGet: "Run `node scripts/gen-tasks.mjs --seed 20261015` from the repository root. Hidden eval: `node scripts/gen-tasks.mjs --seed <n> --split hidden`.", retrievedAt: "2026-10-16T00:00:00.000Z",
+      contaminationNotes: "Public split uses seed 20261015 (60 tasks). Hidden evaluation uses a different seed via --split hidden; keep hidden JSONL out of the npm package.",
+      refresh: "Edit docs/conflict-catalog.md or generator templates, bump seed, regenerate, and review the JSONL diff.",
+    },
+    {
+      name: "Human-written conflict catalog", kind: "human-written", url: "https://github.com/pooriaarab/benchmark-instruction-hierarchy/blob/main/docs/conflict-catalog.md",
+      licence: "MIT", howToGet: "Committed in docs/conflict-catalog.md.", retrievedAt: "2026-10-16T00:00:00.000Z",
+      contaminationNotes: "Catalog labels are MIT; tasks are synthetic combinations, not copied from IHEval.", refresh: "Extend the catalog and regenerate tasks.",
+    },
+  ],
   gradingMethod: "Exact match for single answers; deterministic state replay for episodes.",
 });
