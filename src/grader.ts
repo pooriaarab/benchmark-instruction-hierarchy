@@ -46,7 +46,7 @@ function runAssertion(answer: string, assertion: Assertion): { pass: boolean; re
     }
     case "regex": {
       const re = new RegExp(assertion.pattern, assertion.flags ?? "m");
-      return re.test(answer.trim())
+      return re.test(normalizeAnswer(answer))
         ? { pass: true, reason: `${tag}regex ok` }
         : { pass: false, reason: `${tag}regex /${assertion.pattern}/ failed` };
     }
