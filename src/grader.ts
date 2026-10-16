@@ -44,7 +44,7 @@ function runAssertion(answer: string, assertion: Assertion): { pass: boolean; re
 }
 
 export function gradeInstructionHierarchy(task: Task, submission: Trace): TaskScore {
-  if (submission.answer === undefined || submission.answer.trim() === "") {
+  if (typeof submission.answer !== "string" || submission.answer.trim() === "") {
     return { score: 0, reason: "Submission has no answer." };
   }
   const answer = submission.answer;
