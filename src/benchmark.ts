@@ -141,14 +141,17 @@ export type BadMode =
   | "labelprevc"
   | "labelbarehead"
   | "labelpool"
-  | "labeluniq";
+  | "labeluniq"
+  | "labelnextmeta"
+  | "labelprevstamp"
+  | "labeltrail";
 
 export interface BadAnswerOptions {
   /** Know the system rule's refusal word: refuse on secret-asking tasks. */
   refuseAware?: boolean;
 }
 
-type LabelSelect = "all" | "prevnc" | "prevc" | "barehead" | "pool" | "uniq";
+type LabelSelect = "all" | "prevnc" | "prevc" | "barehead" | "pool" | "uniq" | "nextmeta" | "prevstamp" | "trail";
 
 const RULE_SECTION_RE = /## User rules\n([\s\S]*?)\n\n## /;
 const CONTEXT_SECTION_RE = /## Context\n([\s\S]*?)\n\n## /;
@@ -186,6 +189,8 @@ function rulingMap(prompt: string): Record<string, string> {
 interface LabelCandidate {
   /** The previous context line, trimmed ("" when the label opens a block). */
   prev: string;
+  /** The next context line, trimmed ("" when the label closes a block). */
+  next: string;
   word: string;
   answer: string;
 }
@@ -228,15 +233,25 @@ function scanLabels(prompt: string): LabelScan {
       if (mapped !== undefined) answer = `${replyLabel}: ${mapped}`;
       else if (forms.includes(`${replyLabel}: ${word}`)) answer = `${replyLabel}: ${word}`;
     }
-    candidates.push({ prev: (lines[i - 1] ?? "").trim(), word, answer });
+    candidates.push({ prev: (lines[i - 1] ?? "").trim(), next: (lines[i + 1] ?? "").trim(), word, answer });
   }
   return { replyLabel, forms, verdict, candidates };
 }
 
 const HEADERISH = /^[A-Z0-9][A-Z0-9 '"&()—-]{4,}$/;
+const TRAILING_LINE_RE = /^(?:Filed \d{4}-\d{2}-\d{2}\.|[A-Z0-9][A-Z0-9-]*-AUDIT: sealed)$/;
+const DATE_STAMP_RE = /\d{4}-\d{2}-\d{2}/;
 
 function filterCandidates(candidates: LabelCandidate[], sel: LabelSelect): LabelCandidate[] {
   switch (sel) {
+    case "nextmeta":
+      return candidates.filter((c) => TRAILING_LINE_RE.test(c.next));
+    case "prevstamp":
+      return candidates.filter((c) => DATE_STAMP_RE.test(c.prev));
+    case "trail":
+      // Any trailing line after the label line — a metadata stamp, an audit
+      // seal, or an in-block continuation — not just the two known shapes.
+      return candidates.filter((c) => c.next !== "");
     case "prevnc":
       return candidates.filter((c) => !c.prev.endsWith(":"));
     case "prevc":
@@ -284,6 +299,14 @@ const LABEL_MODES: Record<string, { sel: LabelSelect; at: "first" | "last" | "mi
   labelbarehead: { sel: "barehead", at: "first" },
   labelpool: { sel: "pool", at: "first" },
   labeluniq: { sel: "uniq", at: "first" },
+  // Next-line shape: the label line is followed by a trailing metadata line
+  // ("Filed <date>." or "<LABEL>-AUDIT: sealed").
+  labelnextmeta: { sel: "nextmeta", at: "first" },
+  // Previous-line shape: the line above carries an ISO date stamp.
+  labelprevstamp: { sel: "prevstamp", at: "first" },
+  // The label line has a trailing line after it (a metadata stamp, an audit
+  // seal, or an in-block continuation).
+  labeltrail: { sel: "trail", at: "first" },
 };
 
 /**

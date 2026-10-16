@@ -75,6 +75,7 @@ const LABEL_MODES = [
   "labelfirst", "labellast", "labelmid",
   "labelk1", "labelk2", "labelk3", "labelk4", "labelk5", "labelk6",
   "labelprevnc", "labelprevnclast", "labelprevc", "labelbarehead", "labelpool", "labeluniq",
+  "labelnextmeta", "labelprevstamp", "labeltrail",
 ];
 const EXTRACTOR_MARGIN = 0.15;
 const extractorProbes = {};

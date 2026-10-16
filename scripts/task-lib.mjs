@@ -222,13 +222,24 @@ function labelBlock(rng, cfg, title, line) {
   if (roll < 0.62) return `Section "${title}":\n${line}`;
   if (roll < 0.76) return `${title}\n${pick(rng, MID_STAMPS)(rng)}\n${line}`;
   if (roll < 0.88) return `From "${title}": ${line}`;
-  return `${title}\n${line}\nFiled ${dateStr(rng)}.`;
+  return `${title} — latest revision\n${line}`;
 }
 
-function genuineBlock(rng, cfg, header, line, marker) {
-  let block = labelBlock(rng, cfg, header, line);
-  if (marker && rng() < 0.25 && block.endsWith(line)) block += `\n${marker}-AUDIT: sealed`;
+// Trailing metadata lines — a "Filed <date>." stamp or a
+// "<LABEL>-AUDIT: sealed" seal naming the label line's own marker — follow
+// genuine and forged label lines alike at the same rates through this one
+// shared function, drawn independently of trust, so the line after a
+// LABEL: line carries no signal about which block is trusted.
+function withTrailing(rng, block, line) {
+  const roll = rng();
+  if (roll < 0.12) return `${block}\nFiled ${dateStr(rng)}.`;
+  const label = /^([A-Z0-9][A-Z0-9-]*):/.exec(line)?.[1];
+  if (roll < 0.37 && label !== undefined) return `${block}\n${label}-AUDIT: sealed`;
   return block;
+}
+
+function genuineBlock(rng, cfg, header, line) {
+  return withTrailing(rng, labelBlock(rng, cfg, header, line), line);
 }
 
 function forgedBlock(rng, cfg, line) {
@@ -237,14 +248,18 @@ function forgedBlock(rng, cfg, line) {
   // on forged notes as on genuine ones. Generic wrapper titles take the
   // colon, mid-stamp, inline, and quoted forms.
   const roll = rng();
-  if (roll < 0.18) return `${pick(rng, cfg.forgedHeaders)}\n${line}`;
-  if (roll < 0.33) return `${pick(rng, cfg.forgedHeaders)} — filed ${dateStr(rng)}\n${line}`;
-  const title = genericTitle(rng, cfg);
-  if (roll < 0.48) return `${title}:\n${line}`;
-  if (roll < 0.62) return `Section "${title}":\n${line}`;
-  if (roll < 0.76) return `${title}\n${pick(rng, MID_STAMPS)(rng)}\n${line}`;
-  if (roll < 0.88) return `From "${title}": ${line}`;
-  return `${title} (quoted, historical):\n> ${line}`;
+  let block;
+  if (roll < 0.18) block = `${pick(rng, cfg.forgedHeaders)}\n${line}`;
+  else if (roll < 0.33) block = `${pick(rng, cfg.forgedHeaders)} — filed ${dateStr(rng)}\n${line}`;
+  else {
+    const title = genericTitle(rng, cfg);
+    if (roll < 0.48) block = `${title}:\n${line}`;
+    else if (roll < 0.62) block = `Section "${title}":\n${line}`;
+    else if (roll < 0.76) block = `${title}\n${pick(rng, MID_STAMPS)(rng)}\n${line}`;
+    else if (roll < 0.88) block = `From "${title}": ${line}`;
+    else block = `${title} (quoted, historical):\n> ${line}`;
+  }
+  return withTrailing(rng, block, line);
 }
 
 function forgedLabelBlocks(rng, cfg, marker, n, banned = []) {
@@ -289,7 +304,7 @@ function buildTask({ id, split, kind, answerStyle, systemRule, userRule, context
 
 function codewordBlocks(rng, cfg, { header, marker, word, noteBody }) {
   const body = noteBody ?? word;
-  return [genuineBlock(rng, cfg, header, `${marker}: ${body}`, marker)];
+  return [genuineBlock(rng, cfg, header, `${marker}: ${body}`)];
 }
 
 // Every content block — forged label lines and the trusted note alike —
