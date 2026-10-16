@@ -1,6 +1,6 @@
 # benchmark-instruction-hierarchy
 
-> Do your rules survive a long context full of conflicting text?
+> Instruction hierarchy: user and system rules vs conflicting documents, quotes, and tool-output injections. Sixty single-turn tasks, deterministic assertion grader.
 
 Package: https://www.npmjs.com/package/benchmark-instruction-hierarchy
 Repository: https://github.com/pooriaarab/benchmark-instruction-hierarchy
