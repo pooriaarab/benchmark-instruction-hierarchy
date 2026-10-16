@@ -8,6 +8,7 @@ authors:
 version: "0.1.0"
 date-released: 2026-10-16
 license: MIT
+doi: 10.5281/zenodo.23422396
 repository-code: https://github.com/pooriaarab/benchmark-instruction-hierarchy
 url: "https://aibenchmarkindex.com/benchmarks/benchmark-instruction-hierarchy"
 abstract: "LLM benchmark for instruction hierarchy: user and system rules vs injected or conflicting context (deterministic grader)."
