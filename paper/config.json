@@ -1,0 +1,13 @@
+{
+  "title": "Benchmark Instruction Hierarchy: Authority, Utility, and Injection Detection",
+  "orcid": "https://orcid.org/0009-0005-9964-6841",
+  "keywords": [
+    "instruction hierarchy",
+    "prompt injection",
+    "benchmark",
+    "simulated control ablation"
+  ],
+  "code_url": "https://github.com/pooriaarab/benchmark-instruction-hierarchy",
+  "artifact_name": "instruction-hierarchy-paper.pdf",
+  "source_commit": "c1852ae792ae9b5b1dbb001468f6174eac5bc9d6"
+}
