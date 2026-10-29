@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "title": "Benchmark Instruction Hierarchy: Authority, Utility, and Injection Detection",
+  "abstract": "Instruction hierarchy requires an assistant to preserve authorized rules when lower-trust text requests a conflicting answer. This benchmark isolates that problem in synthetic single-turn tasks with explicit authority cues and deterministic checks. We distinguish full task success from the presence of listed injection text. Scripted controls expose the limits of either measure alone. An additional simulated agent population sweep compares unchecked responses with an ideal blocker that knows the listed attack strings. The simulated blocker can remove detected attack text without recovering the required answer. These experiments validate measurement behavior on a fixed public task set. They do not estimate learned-model ability, deployment security, or human performance. We provide reproducible outputs, uncertainty intervals, and a scoped roadmap for external validation.",
+  "authors": [
+    {
+      "name": "Pooria Arab",
+      "affiliation": "Independent researcher",
+      "orcid": "https://orcid.org/0009-0005-9964-6841"
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "keywords": [
+    "instruction hierarchy",
+    "prompt injection",
+    "benchmark",
+    "simulated control ablation"
+  ],
+  "code_url": "https://github.com/pooriaarab/benchmark-instruction-hierarchy",
+  "artifact_name": "instruction-hierarchy-paper.pdf"
+}

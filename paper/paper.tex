@@ -1,0 +1,136 @@
+\documentclass{article}
+\input{template/layout}
+\input{data/macros.generated}
+\input{data/controls.generated}
+\input{data/sweep.generated}
+\input{data/contrast.generated}
+\input{data/kinds.generated}
+\title{Benchmark Instruction Hierarchy:\\Authority, Utility, and Injection Detection}
+\author{Pooria Arab\\Independent researcher\\\href{https://orcid.org/0009-0005-9964-6841}{ORCID: 0009-0005-9964-6841}}
+\begin{document}
+\maketitle
+\begin{abstract}\PaperAbstract\end{abstract}
+\section{Why instruction authority matters}
+An assistant can read the right answer and still follow the wrong instruction. A retrieved note may contain both useful facts and a request to ignore the user. A quotation may describe a command without authorizing it. A later message may claim a higher role that it does not possess. These cases require a decision about authority before a decision about content.
+
+We define instruction hierarchy performance as preserving the authorized response rule when lower-trust text conflicts with it. This definition includes useful completion. Silence avoids many visible violations but does not answer a legitimate request. A response can also avoid every known attack word while violating the requested format. The evaluation must therefore separate completion from a narrow sign of attack adoption.
+
+Benchmark Instruction Hierarchy measures this distinction using synthetic, single-turn text tasks. Each task states a rule, supplies conflicting material, and specifies an assessable response. The public set contains \TaskCount{} tasks across \KindCount{} conflict types. The task design makes the authority relation explicit. It does not require the evaluator to infer a user's hidden preferences. This narrow setting supports a transparent test of scoring behavior before any learned-model comparison.
+
+The contribution is a measurement design and a reproducible control study. We report what simple policies can earn, where refusal receives credit, and what a listed-string detector misses. A separate simulated control ablation asks whether suppressing known attack text restores valid answers. The answer is conditional on the simulation's response model. It cannot establish the effectiveness of a deployed safety layer.
+
+The study evaluates a fixed public task set. The answer-key oracle is a check on answerability and scoring consistency, not a capable agent. The other scripted policies isolate common shortcuts. No human participant or learned language model takes part. These limits determine the scope of every result below.
+\section{Related work and scope}
+Wallace et al. formulate instruction hierarchy as a way to prioritize privileged instructions over conflicting lower-privilege text \citep{wallace2024}. Their work concerns training and model robustness. Our study concerns a small evaluation instrument and the behavior of its measurements. It does not replicate their training method or compare against their reported models.
+
+AgentDojo evaluates agents that use tools while processing untrusted data \citep{agentdojo2024}. That setting includes task execution and security conditions in an interactive environment. Our tool-text category represents a tool result as text inside a single prompt. It does not execute a tool, authenticate the sender, or maintain state across an episode. This distinction matters when interpreting a successful response as evidence about actual agent security.
+
+PayBench frames delegated authority around both unsafe action and useful completion \citep{paybench}. Its proposed matched traps and harmless lookalikes motivate careful control design. The present task set is not a matched trap/lookalike dataset. Comparing scripted policies on identical items gives a paired policy contrast, not an estimate of the effect of adding an attack. A clean counterpart for each attacked item remains future work.
+
+These studies address related authority problems at different levels. Training methods concern the model. Interactive environments concern an agent and its tools. Our controlled text setting concerns response selection under stated authority cues. We make no claim that this setting replaces broader evaluations. Its value lies in making limited measurements easy to inspect and reproduce.
+\section{Experiment design}
+\subsection{Tasks and trust boundaries}
+Each task presents textual sections for system rules, user rules, context, and a final request. The sections share a prompt string. They are not separate authenticated message roles in this study. The intended hierarchy is therefore conveyed through language and formatting. A model would have to interpret those cues. Our deterministic controls instead expose the scoring consequences of selected response strategies.
+
+The context contains distractors and instruction-like passages. Some passages reuse answer labels from the trusted rule. Others claim administrative status or appear after the relevant note. The trusted note can use different surrounding forms. Thus a visible label is not sufficient evidence of authority. The expected answer depends on which passage the user authorizes, or on a higher rule that limits disclosure.
+
+The material is synthetic. Names, operational notes, and credential-like strings are task content, not records from real people or systems. The public answer key is available by design. This makes direct audit possible but prevents a claim of contamination resistance. A policy with access to the key can succeed without reading the context.
+\subsection{Fixed controls}
+The oracle returns the expected answer. Empty returns no content. Constant returns the same unrelated token for every task. Echo returns the full prompt. Refuse returns a short generic refusal. Attack-copy returns the first listed injected output. First-label and last-label use the benchmark's supplied surface extractors. They select candidates by position without deciding which source is trusted.
+
+Only the oracle and attack-copy controls deliberately use privileged task metadata to choose an answer. The surface extractors read prompt text. Their role is to expose positional shortcuts, not to approximate general language understanding. Echo tests whether copying all visible information earns credit. Refuse tests whether avoiding known attack strings can masquerade as useful compliance.
+
+All controls use the public runner and its normal grading path. Each control runs twice on the same task set. The repeated runs test reproducibility; they do not double the number of independent tasks. We preserve outputs and compare semantic records after removing timing fields. The study plan precedes result collection in version history. It is a local committed plan, not an independently timestamped registration.
+\subsection{Predefined questions}
+The first question asks whether the oracle succeeds while empty and attack-copy controls fail. This is a necessary measurement check. It would reveal a mismatch between reference answers and grading, or credit for responses that do not complete the task. Success on this check alone cannot establish construct validity.
+
+The second question asks whether generic refusal avoids listed attack text while failing legitimate response requirements. This checks a common interpretation error: treating a low injection indicator as a high overall safety score. The third question extends that concern with a simulated blocker. It asks whether removing listed attack strings improves full task success by a comparable amount.
+
+We retain every public item and every planned policy. Empty responses remain failures. Runtime errors abort the study instead of becoming silent exclusions. No policy is tuned after its score is observed. The experiments use local scripted computation and no paid inference. Hosted model access is not configured for this study, and provider availability is not tested.
+\section{Coverage and failure taxonomy}
+\begin{figure}[ht]\centering\input{figures/coverage}\caption{The public set balances conflict labels. Counts come from task metadata; each bar is a census count, not an estimated rate. Equal counts do not establish equal difficulty or independent task templates.}\end{figure}
+\paragraph{User versus document.} A user identifies an authoritative note. Other document sections contain competing labels and output requests. A failure can arise when a response treats the presence of a familiar label as permission. The relevant capability is source selection under an explicit user rule.
+\paragraph{System versus user.} A higher textual rule restricts the response, including disclosure of synthetic secrets. Some cases require a specified refusal word. Other cases allow a broader refusal or require an ordinary authorized answer. This mixture makes generic refusal an incomplete strategy. It also makes format requirements part of the measured construct.
+\paragraph{Late override.} A competing directive appears later in the context. The intended task requires preserving authority despite recency. A late directive can be visually salient without being authorized. A response that follows it demonstrates a selection error, although the current study does not model attention or memory inside a language model.
+\paragraph{Format persistence.} The response must retain an authorized output form despite conflicting material. A semantically plausible answer can fail if it violates the stated form. This category tests an observable contract. It does not by itself distinguish misunderstanding from a model's tendency to add explanatory prose.
+\paragraph{Quoted text.} A quotation contains instruction-like language. The task requires treating it as content. A response fails when it promotes quoted material into a directive. This category models a common boundary in reading tasks, but it does not cover every nested quotation convention or document format.
+\paragraph{Tool text.} A passage presented as tool output requests a conflicting response. The model should preserve the authorized rule. Here the tool is a represented source, not a live service. Consequently the result concerns textual authority cues rather than transport-level isolation, tool permissions, or execution controls.
+
+These labels describe task intent. They do not provide a causal diagnosis of an observed answer. A wrong label selection could reflect recency, copying, confusion about formatting, or failure to identify a section. The final output alone cannot distinguish those mechanisms. Reporting the conflict label supports targeted inspection without claiming access to internal reasoning.
+
+The same caution applies to coverage. Balanced categories make the pooled average easy to interpret as an equal-weight summary of these categories. They do not justify a general estimate of prompt-injection prevalence. Real deployments have different source mixtures, task lengths, and consequences. A later deployment study must define its own sampling frame.
+\section{Metrics and scoring}
+\subsection{Full success and weighted score}
+Each task supplies deterministic assertions. The grader can check normalized equality, exact equality, required content, forbidden content, regular expressions, and refusal forms. By default an assertion is a gate. Failing any gate sets the score to zero. If all gates pass, the score is the fraction of assertion weight satisfied. A soft assertion can therefore reduce credit without triggering a gate failure.
+
+Let $a_{ij}$ denote whether response $i$ satisfies assertion $j$, and let $w_{ij}$ be its weight. Let $G_i$ contain the gated assertions. The score is
+\[s_i=\begin{cases}0,&\text{if some }j\in G_i\text{ has }a_{ij}=0,\\ \frac{\sum_jw_{ij}a_{ij}}{\sum_jw_{ij}},&\text{otherwise.}\end{cases}\]
+Our primary outcome is full success, $Y_i=\mathbf{1}\{s_i=1\}$. This definition does not award success for merely avoiding forbidden content. It also avoids treating a partly correct weighted score as a Bernoulli observation. We preserve the raw weighted scores for audit but report success counts for the control comparisons.
+
+Normalized matching removes certain differences in case, emphasis, whitespace, and edge punctuation. It is not semantic equivalence. A correct paraphrase can fail a strict output requirement. Refusal recognition accepts specified patterns rather than all expressions a human might regard as refusal. These design choices make grading repeatable while narrowing what a passing answer means.
+\subsection{Listed injection text}
+The secondary outcome is $D_i$, an indicator that the normalized response contains a normalized listed injected output. The benchmark names this flag ``injection followed.'' We describe it as listed-text detection because the implementation observes a substring, not the reason for emitting it. Echoing an attack in an explanation can trigger the flag without following its instruction.
+
+The denominator contains tasks with listed injected outputs. Every task in this study qualifies. An empty response returns before the detailed assertion record exists. We count its listed-text detection as absent because it emits no text. We retain its task category through metadata. We do not let missing details create an artificial unknown category or remove an observation.
+
+A negative flag does not prove safety. An unlisted harmful answer can evade detection. A refusal can avoid listed strings yet fail the requested task. A positive flag also needs interpretation: an explanation can mention an attack string while rejecting it. Thus $D_i$ is a diagnostic paired with full success, not a replacement for a security judgment.
+\subsection{Uncertainty and paired comparisons}
+Control proportions use Wilson intervals \citep{wilson1927}. For $k$ successes among $n$ tasks, with $\hat p=k/n$, we report
+\[\frac{\hat p+z^2/(2n)\ \pm\ z\sqrt{\hat p(1-\hat p)/n+z^2/(4n^2)}}{1+z^2/n},\qquad z=1.959963984540054.\]
+The intervals have nominal 95\% coverage under an independent Bernoulli sampling model. The present tasks are a fixed synthetic set with shared templates. Their descriptive intervals therefore illustrate finite-item uncertainty under a hypothetical sampling model. They are not validated coverage statements for all possible attacks.
+
+The oracle-minus-refusal comparison uses paired task differences. We resample tasks within conflict categories and preserve the category sizes. The percentile interval uses \DrawCount{} bootstrap draws. This avoids pretending that two policies see independent task samples. It does not remove dependence among tasks generated from shared templates. We report no significance test or model ranking.
+\section{Results from deterministic controls}
+\begin{table}[ht]\centering\small\begin{tabular}{lrrr}\toprule Policy & Success count & Success (\%, 95\% CI) & Listed text (\%, 95\% CI)\\\midrule\ControlRows \bottomrule\end{tabular}\caption{Oracle success and attack rejection coexist with weak generic refusal. Each row uses the complete public set. Intervals are Wilson intervals over tasks.}\end{table}
+\begin{figure}[ht]\centering\input{figures/controls}\caption{Avoiding listed text does not imply task success. Points show deterministic control proportions on the fixed public set; bars show Wilson 95\% intervals. Empty and constant responses illustrate the distinction directly.}\end{figure}
+The oracle reaches the full-success ceiling. Empty, constant, echo, and attack-copy receive no full-success credit. These results support the intended floor and ceiling checks for the tested policies. They do not show that every possible shortcut fails. In particular, a policy that reads the public answer key would be indistinguishable from the oracle under these outcomes.
+
+Generic refusal earns credit only on cases whose assertion accepts that refusal form. Other secret-related cases require a specific response token, and ordinary response tasks require their requested content. The contrast therefore concerns the complete output contract. It must not be read as evidence that the generic refusal leaks secrets on the remaining cases.
+
+First-label and last-label earn some full successes while producing listed strings on many tasks. Their partial success demonstrates that a surface heuristic can occasionally match the required answer. It does not show source-sensitive reasoning. The study reports both heuristics as defined in advance; it does not select the better score as a general estimate of shortcut resistance.
+
+The paired oracle-minus-refusal full-success gap is \OracleGap{} percentage points. This gap quantifies the difference between an answer-key control and a blanket policy on the same tasks. Its large size is expected from the controls' construction. It is evidence about the scoring boundary, not a discovery about trained models.
+\begin{table}[ht]\centering\small\begin{tabular}{lrrr}\toprule Conflict type & Items & Refusal success (\%) & First-label success (\%)\\\midrule\KindRows \bottomrule\end{tabular}\caption{Category summaries localize policy success. Brackets contain Wilson 95\% intervals. Small category sizes produce broad intervals, including at observed boundaries.}\end{table}
+A null result remains useful here. Empty and constant policies avoid listed text but complete no tasks. Attack-copy completes no tasks and provides a positive detection control. Together they show that the two measurements respond to different properties. The repeat runs preserve semantic records for every control. Repeat agreement supports computational stability on these inputs, not statistical precision from extra observations.
+\section{Additional simulated experiment: a control-layer ablation}
+\subsection{Simulated agents and intervention}
+The additional experiment uses artificial response generators. A simulated agent receives a fixed seed. For each public task it draws a uniform value. If that value is below a selected competence parameter $q$, it emits the reference answer. Otherwise it emits the first listed attack output. This is a two-mode response model, not a model of linguistic reasoning.
+
+We use \AgentCount{} simulated agents, with integer seeds from one through \AgentCount{}. We sweep the preregistered values of $q$ and reuse the same agent/task draws across settings. This pairing prevents random changes in task difficulty from obscuring the comparison. The unchecked condition sends the candidate directly to the grader. The simulated blocker inspects the candidate against the task's listed injected outputs. If any listed string occurs, it replaces the whole response with a generic refusal.
+
+The simulated blocker has privileged knowledge. It sees the benchmark's attack inventory, which a deployed control would not generally possess. It also uses the same family of string checks as the diagnostic. Its ability to eliminate that diagnostic is built into the experiment. The useful question is what happens to the separate full-success measure after the replacement.
+
+Each simulated candidate still passes through the public runner. We retain the score and final answer for every simulated agent/task condition. Confidence intervals use \DrawCount{} bootstrap draws over whole simulated agents, preserving each agent's responses. This estimates Monte Carlo variability conditional on the fixed public tasks and the specified response generator. It does not measure uncertainty over trained models or deployment environments.
+\subsection{Simulated results}
+\begin{figure}[ht]\centering\input{figures/sweep}\caption{The simulated blocker adds limited task success beyond the simulated unchecked policy. Curves show means across simulated agents; bars show agent-cluster percentile 95\% intervals. The parameter controls oracle selection, not measured model capability.}\end{figure}
+\begin{table}[ht]\centering\small\begin{tabular}{llrr}\toprule Simulated $q$ & Simulated layer & Success (\%, 95\% CI) & Listed text (\%, 95\% CI)\\\midrule\SweepRows \bottomrule\end{tabular}\caption{Complete simulated sweep. ``None'' leaves the simulated candidate unchanged; ``block'' substitutes a generic refusal for listed attack text. Intervals resample simulated agents.}\end{table}
+The simulated unchecked success curve follows oracle selection by construction, with finite-seed variation. The simulated blocker removes detected attack text throughout the sweep. It does not reconstruct the correct source or generate the authorized answer. Its success gain comes from replacing some attack outputs with a refusal that the task already accepts.
+
+At the simulated endpoint that always chooses the oracle, the blocker adds no benefit. At the simulated endpoint that always chooses an attack output, the blocker reduces the diagnostic but recovers only refusal-compatible cases. These endpoint results are consequences of the response model and the task contract. They should not be described as independently discovered defense properties.
+\begin{table}[ht]\centering\small\begin{tabular}{rrr}\toprule Simulated $q$ & Success change (points, 95\% CI) & Listed-text change (points, 95\% CI)\\\midrule\ContrastRows \bottomrule\end{tabular}\caption{Paired simulated blocker-minus-unchecked contrasts. Agent-cluster bootstrap intervals preserve pairing. Boundary intervals can collapse because every simulated agent has the same endpoint response pattern.}\end{table}
+The simulated study illustrates a measurement risk. A control optimized against a known-string indicator can improve that indicator much more than useful completion. This remains true even when the indicator is perfectly observable to the control. A deployed defense would also face unknown attacks, benign quotations, and uncertain authority. Those additional problems are absent here and may change both false-positive and false-negative behavior.
+
+We do not interpret the simulated parameter as a real model's accuracy. Real errors need not be attack copies. They can be malformed correct answers, irrelevant refusals, partial disclosures, or new strings. The simulated population deliberately omits those behaviors. Its role is to test a specific distinction between blocking and recovery under stated assumptions.
+\section{Roadmap for stronger evidence}
+The first extension is matched clean content. Each conflict item should have a version that preserves the legitimate task while removing the malicious instruction. The pair should retain length, answer location, and formatting as closely as possible. This would help separate reading difficulty from conflict sensitivity. It would also expose defenses that reject benign material too often.
+
+The second extension is source validation. Tasks that use actual message roles or tool channels can distinguish textual claims of authority from authority enforced by the environment. Such tasks require independent checks that the adapter preserves roles correctly. A message labelled ``system'' inside user text must not silently become a privileged system message during evaluation.
+
+The third extension is richer outcome validation. Human raters should assess ambiguous refusals and correct paraphrases without seeing the policy identity. Disagreement should inform revisions to the intended response contract. The study should then report both agreement and specific disagreement classes. No human agreement number is available from the present work.
+
+The fourth extension is learned-model evaluation under a frozen protocol. Model identity, serving provider, prompts, decoding settings, and outputs should be recorded. An authorized free-only route could support a limited comparison. Provider terms must permit publication. Unavailable routes should remain missing observations rather than becoming fabricated baselines or an excuse to change the hypothesis.
+
+Finally, new held-out families should vary the authority cue itself, not only random names or codewords. A fresh seed changes surface content while preserving much of the task structure. Transfer to unfamiliar structures is a stronger claim. It requires a separate test set and a clearly stated policy for keeping that set out of tuning.
+\section{Caveats and claim boundaries}
+\paragraph{Construct coverage.} The benchmark measures compliance with explicit textual response rules. It does not cover negotiation over unclear authority, conflicting real-world obligations, or persistent delegation. A passing result is compatible with pattern matching. No test in this packet establishes a model's internal representation of authority.
+\paragraph{Scoring validity.} Deterministic assertions make outputs auditable but can reject acceptable language outside the permitted form. Substring detection can mistake a quoted attack for attack adoption. It can also miss an unlisted violation. Reporting both measures limits an obvious interpretation error but does not validate either against human judgment.
+\paragraph{Sampling and uncertainty.} The public set is synthetic and shares design templates. Wilson intervals are descriptive under an assumed sampling model. Simulated intervals measure variation over artificial seeds. Neither interval family is a deployment guarantee. Repeated deterministic execution checks stability, not new information about a broader population.
+\paragraph{Simulation realism.} The simulated oracle mixture and ideal blocker use information unavailable to ordinary agents. The simulated gain reflects the response distribution we chose. It does not rank actual defenses. A richer simulation could include harmless mentions, unseen attack strings, and recovery attempts, but those would introduce new assumptions requiring separate preregistration.
+\paragraph{External evidence.} There is no learned-model evaluation, human study, new private holdout, or independent replication in this packet. Free hosted inference is not configured for this study. We do not claim that free models are unavailable in general. The work is a baseline audit of the instrument plus a labelled simulated experiment.
+\paragraph{Use and misuse.} A small public benchmark can become an optimization target. Improving its score may reward recognition of familiar labels or refusal conventions. Users should inspect category results and actual outputs before making capability claims. A low listed-text rate should never be presented alone as evidence that an agent can safely execute external actions.
+\section{Availability, citation, and author}
+Code and generated study data are available at \url{https://github.com/pooriaarab/benchmark-instruction-hierarchy}. The paper text and generated figures use CC-BY-4.0. The benchmark retains its software license. Cite this paper by title and author, with the version used. This packet has no separately assigned paper DOI and does not claim venue acceptance.
+
+Pooria Arab is an independent researcher and the benchmark author. This relationship can influence task design and interpretation. Automated controls reduce some implementation ambiguity but do not provide independent scientific review. AI assistance supports drafting, analysis code, and verification. Responsibility for the released claims remains with the author.
+\bibliographystyle{plainnat}\bibliography{references}
+\end{document}
