@@ -1,5 +1,7 @@
 # benchmark-instruction-hierarchy
 
+Paper: [10.5281/zenodo.23752403](https://doi.org/10.5281/zenodo.23752403)
+
 [![npm](https://img.shields.io/npm/v/benchmark-instruction-hierarchy)](https://www.npmjs.com/package/benchmark-instruction-hierarchy) [![downloads](https://img.shields.io/npm/dm/benchmark-instruction-hierarchy)](https://www.npmjs.com/package/benchmark-instruction-hierarchy) [![license](https://img.shields.io/npm/l/benchmark-instruction-hierarchy)](./LICENSE) [![types](https://img.shields.io/badge/TypeScript-types-3178c6)](#sdk)
 
 [AI Benchmark Index](https://private-repo-337e.com/benchmarks/benchmark-instruction-hierarchy) · [npm](https://www.npmjs.com/package/benchmark-instruction-hierarchy) · [API](#http-api) · [MCP](#model-context-protocol)
