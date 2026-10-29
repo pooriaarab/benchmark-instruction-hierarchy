@@ -25,4 +25,6 @@ preferred-citation:
       given-names: Pooria
       orcid: "https://orcid.org/0009-0005-9964-6841"
   year: 2026
-  url: "https://github.com/pooriaarab/benchmark-instruction-hierarchy/tree/bihr-36-benchmark-paper/paper"
+  doi: 10.5281/zenodo.23752403
+  license: CC-BY-4.0
+  url: "https://doi.org/10.5281/zenodo.23752403"
