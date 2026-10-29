@@ -1,0 +1,4 @@
+\begin{tikzpicture}\begin{axis}[ymin=0,ymax=105,xlabel={Simulated oracle-selection probability},ylabel={Simulated full success (\%)},legend pos=north west]
+\addplot[mark=*,okblue,error bars/.cd,y dir=both,y explicit] table[x=q,y=none,y error minus=nlow,y error plus=nhigh,col sep=comma]{data/sweep.generated.csv};\addlegendentry{Simulated unchecked}
+\addplot[mark=triangle*,dashed,okorange,error bars/.cd,y dir=both,y explicit] table[x=q,y=block,y error minus=blow,y error plus=bhigh,col sep=comma]{data/sweep.generated.csv};\addlegendentry{Simulated blocker}
+\end{axis}\end{tikzpicture}

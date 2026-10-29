@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "pages": 9,
+  "controls": 8,
+  "deterministicRuns": 16,
+  "simulatedRuns": 1000,
+  "simulatedTaskResponses": 60000,
+  "rescored": true,
+  "repeatsMatch": true,
+  "provenanceMatch": true,
+  "pdfSha256": "29a221534e758773daf0f23b6dd9b93d038e10054d1b1f4552c22837c1725493"
+}

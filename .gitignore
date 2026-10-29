@@ -3,3 +3,12 @@ dist/
 artifacts/
 data/tasks-hidden.jsonl
 *.tgz
+# Reproducible local paper build
+paper/*.pdf
+paper/*.log
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/neurips_2026.sty
+paper/.style.zip

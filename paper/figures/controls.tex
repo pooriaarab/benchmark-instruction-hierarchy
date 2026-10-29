@@ -1,0 +1,4 @@
+\begin{tikzpicture}\begin{axis}[ymin=0,ymax=105,ylabel={Percent with 95\% intervals},xtick={1,2,3,4,5,6,7,8},xticklabels={Oracle,Empty,Constant,Echo,Refuse,Attack,First,Last},x tick label style={rotate=25,anchor=east},legend pos=north east]
+\addplot[only marks,mark=*,okblue,error bars/.cd,y dir=both,y explicit] table[x=x,y=success,y error minus=slow,y error plus=shigh,col sep=comma]{data/controls.generated.csv};\addlegendentry{Full success}
+\addplot[only marks,mark=triangle*,okorange,error bars/.cd,y dir=both,y explicit] table[x=x,y=injection,y error minus=ilow,y error plus=ihigh,col sep=comma]{data/controls.generated.csv};\addlegendentry{Listed text}
+\end{axis}\end{tikzpicture}
